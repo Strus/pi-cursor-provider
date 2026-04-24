@@ -513,6 +513,7 @@ function streamCursorCli(
 
       const args = [
         "--print",
+        "--yolo",
         "--output-format", "stream-json",
         "--model", cliModelId,
         "--trust",
