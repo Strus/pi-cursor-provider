@@ -1,24 +1,24 @@
 {
-  "type": "module",
-  "pi": {
-    "extensions": [
-      "./index.ts"
-    ]
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "peerDependencies": {
-    "@mariozechner/pi-ai": "*",
-    "@mariozechner/pi-coding-agent": "*"
-  },
-  "scripts": {
-    "lint": "npx biome check",
-    "format": "npx biome check --write",
-    "typecheck": "npx tsc --noEmit"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.2",
-    "typescript": "^5.9.3"
-  }
+	"type": "module",
+	"pi": {
+		"extensions": [
+			"./src/index.ts"
+		]
+	},
+	"engines": {
+		"node": ">=20"
+	},
+	"peerDependencies": {
+		"@mariozechner/pi-ai": "*",
+		"@mariozechner/pi-coding-agent": "*"
+	},
+	"scripts": {
+		"lint": "npx biome check",
+		"format": "npx biome check --write",
+		"typecheck": "npx tsc --noEmit"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.13",
+		"typescript": "^5.9.3"
+	}
 }
