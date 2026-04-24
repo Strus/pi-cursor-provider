@@ -22,6 +22,7 @@ import type {
     Model,
     SimpleStreamOptions,
     TextContent,
+    ThinkingContent,
 } from "@mariozechner/pi-ai";
 import { createAssistantMessageEventStream } from "@mariozechner/pi-ai";
 import type {
@@ -190,6 +191,12 @@ interface CursorToolCallEvent {
     tool_call: Record<string, CursorToolCallPayload>;
 }
 
+interface CursorThinkingEvent {
+    type: "thinking";
+    subtype: "delta" | "completed";
+    text?: string;
+}
+
 interface CursorResultEvent {
     type: "result";
     subtype: string;
@@ -203,6 +210,7 @@ interface CursorEventBase {
 
 type CursorStreamEvent =
     | CursorAssistantEvent
+    | CursorThinkingEvent
     | CursorToolCallEvent
     | CursorResultEvent
     | CursorEventBase;
@@ -327,29 +335,111 @@ function createStreamCursorCli(cursorSessionState: CursorSessionState) {
                     stderrChunks.push(chunk.toString());
                 });
 
-                let textBlockOpen = false;
                 let accumulatedText = "";
+                let openBlock:
+                    | { type: "text"; block: TextContent; index: number }
+                    | {
+                          type: "thinking";
+                          block: ThinkingContent;
+                          index: number;
+                      }
+                    | null = null;
+
+                const closeOpenBlock = () => {
+                    if (!openBlock) return;
+
+                    if (openBlock.type === "text") {
+                        stream.push({
+                            type: "text_end",
+                            contentIndex: openBlock.index,
+                            content: openBlock.block.text,
+                            partial: output,
+                        });
+                    } else {
+                        stream.push({
+                            type: "thinking_end",
+                            contentIndex: openBlock.index,
+                            content: openBlock.block.thinking,
+                            partial: output,
+                        });
+                    }
+
+                    openBlock = null;
+                };
+
+                const ensureTextBlock = (): {
+                    block: TextContent;
+                    index: number;
+                } => {
+                    if (openBlock?.type === "text") {
+                        return openBlock;
+                    }
+
+                    closeOpenBlock();
+
+                    const block: TextContent = { type: "text", text: "" };
+                    output.content.push(block);
+                    const index = output.content.length - 1;
+                    openBlock = { type: "text", block, index };
+                    stream.push({
+                        type: "text_start",
+                        contentIndex: index,
+                        partial: output,
+                    });
+
+                    return { block, index };
+                };
+
+                const ensureThinkingBlock = (): {
+                    block: ThinkingContent;
+                    index: number;
+                } => {
+                    if (openBlock?.type === "thinking") {
+                        return openBlock;
+                    }
+
+                    closeOpenBlock();
+
+                    const block: ThinkingContent = {
+                        type: "thinking",
+                        thinking: "",
+                    };
+                    output.content.push(block);
+                    const index = output.content.length - 1;
+                    openBlock = { type: "thinking", block, index };
+                    stream.push({
+                        type: "thinking_start",
+                        contentIndex: index,
+                        partial: output,
+                    });
+
+                    return { block, index };
+                };
+
                 const appendTextDelta = (delta: string) => {
                     if (!delta) return;
                     if (firstTokenTime === undefined)
                         firstTokenTime = Date.now();
-                    if (!textBlockOpen) {
-                        output.content.push({ type: "text", text: "" });
-                        const idx = output.content.length - 1;
-                        stream.push({
-                            type: "text_start",
-                            contentIndex: idx,
-                            partial: output,
-                        });
-                        textBlockOpen = true;
-                    }
-                    const idx = output.content.length - 1;
-                    const textBlock = output.content[idx] as TextContent;
-                    textBlock.text += delta;
+                    const { block, index } = ensureTextBlock();
+                    block.text += delta;
                     accumulatedText += delta;
                     stream.push({
                         type: "text_delta",
-                        contentIndex: idx,
+                        contentIndex: index,
+                        delta,
+                        partial: output,
+                    });
+                };
+
+                const appendThinkingDelta = (delta: string) => {
+                    if (!delta) return;
+                    if (firstTokenTime === undefined)
+                        firstTokenTime = Date.now();
+                    const { block, index } = ensureThinkingBlock();
+                    block.thinking += delta;
+                    stream.push({
+                        type: "thinking_delta",
+                        contentIndex: index,
                         delta,
                         partial: output,
                     });
@@ -388,6 +478,21 @@ function createStreamCursorCli(cursorSessionState: CursorSessionState) {
                         return;
                     }
 
+                    if (event.type === "thinking") {
+                        const te = event as CursorThinkingEvent;
+                        if (te.subtype === "delta") {
+                            appendThinkingDelta(te.text ?? "");
+                            return;
+                        }
+
+                        if (te.subtype === "completed") {
+                            if (openBlock?.type === "thinking") {
+                                closeOpenBlock();
+                            }
+                            return;
+                        }
+                    }
+
                     // Pi supports structured toolcall_* events, but Cursor CLI's tool_call
                     // stream is observational: by the time we receive it, Cursor has
                     // already executed the tool. Emitting Pi tool calls here would cause
@@ -411,16 +516,7 @@ function createStreamCursorCli(cursorSessionState: CursorSessionState) {
                     child.on("close", (code) => {
                         options?.signal?.removeEventListener("abort", onAbort);
 
-                        if (textBlockOpen) {
-                            const idx = output.content.length - 1;
-                            stream.push({
-                                type: "text_end",
-                                contentIndex: idx,
-                                content: accumulatedText,
-                                partial: output,
-                            });
-                            textBlockOpen = false;
-                        }
+                        closeOpenBlock();
 
                         if (options?.signal?.aborted) {
                             output.stopReason = "aborted";
