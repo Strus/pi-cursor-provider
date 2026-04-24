@@ -15,27 +15,26 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import type {
-	Api,
-	AssistantMessage,
-	AssistantMessageEventStream,
-	Context,
-	Model,
-	SimpleStreamOptions,
-	TextContent,
+    Api,
+    AssistantMessage,
+    AssistantMessageEventStream,
+    Context,
+    Model,
+    SimpleStreamOptions,
+    TextContent,
 } from "@mariozechner/pi-ai";
 import { createAssistantMessageEventStream } from "@mariozechner/pi-ai";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import {
-	runAgentModels,
-	STATIC_MODELS,
-	toCursorId,
-	toProviderModels,
+    runAgentModels,
+    STATIC_MODELS,
+    toCursorId,
+    toProviderModels,
 } from "./models.js";
 import {
-	type CursorToolCallPayload,
-	renderCompletedToolCall,
-	renderStartedToolCall,
-	setRendererTheme,
+    type CursorToolCallPayload,
+    renderCompletedToolCall,
+    setRendererTheme,
 } from "./renderer.js";
 
 // ---------------------------------------------------------------------------
@@ -53,45 +52,45 @@ import {
  * can at least acknowledge that an image was intended.
  */
 function contentBlockToText(
-	block: TextContent | import("@mariozechner/pi-ai").ImageContent,
+    block: TextContent | import("@mariozechner/pi-ai").ImageContent,
 ): string {
-	if (block.type === "text") return block.text;
-	// ImageContent: { type: "image", data: string (base64), mimeType: string }
-	const bytes = Math.round((block.data.length * 3) / 4);
-	return `[Image: ${block.mimeType}, ~${bytes} bytes — note: image input is not supported by the Cursor Agent CLI; the visual content cannot be passed through]`;
+    if (block.type === "text") return block.text;
+    // ImageContent: { type: "image", data: string (base64), mimeType: string }
+    const bytes = Math.round((block.data.length * 3) / 4);
+    return `[Image: ${block.mimeType}, ~${bytes} bytes — note: image input is not supported by the Cursor Agent CLI; the visual content cannot be passed through]`;
 }
 
 function serializeContext(context: Context): string {
-	const lines: string[] = [];
+    const lines: string[] = [];
 
-	if (context.systemPrompt) {
-		lines.push(`[System]\n${context.systemPrompt}\n`);
-	}
+    if (context.systemPrompt) {
+        lines.push(`[System]\n${context.systemPrompt}\n`);
+    }
 
-	for (const msg of context.messages) {
-		if (msg.role === "user") {
-			const text =
-				typeof msg.content === "string"
-					? msg.content
-					: msg.content.map(contentBlockToText).join("\n");
-			lines.push(`[User]\n${text}`);
-		} else if (msg.role === "assistant") {
-			const text = msg.content
-				.filter((c): c is TextContent => c.type === "text")
-				.map((c) => c.text)
-				.join("\n");
-			if (text.trim()) {
-				lines.push(`[Assistant]\n${text}`);
-			}
-		} else if (msg.role === "toolResult") {
-			const text = msg.content.map(contentBlockToText).join("\n");
-			if (text.trim()) {
-				lines.push(`[Tool result: ${msg.toolName}]\n${text}`);
-			}
-		}
-	}
+    for (const msg of context.messages) {
+        if (msg.role === "user") {
+            const text =
+                typeof msg.content === "string"
+                    ? msg.content
+                    : msg.content.map(contentBlockToText).join("\n");
+            lines.push(`[User]\n${text}`);
+        } else if (msg.role === "assistant") {
+            const text = msg.content
+                .filter((c): c is TextContent => c.type === "text")
+                .map((c) => c.text)
+                .join("\n");
+            if (text.trim()) {
+                lines.push(`[Assistant]\n${text}`);
+            }
+        } else if (msg.role === "toolResult") {
+            const text = msg.content.map(contentBlockToText).join("\n");
+            if (text.trim()) {
+                lines.push(`[Tool result: ${msg.toolName}]\n${text}`);
+            }
+        }
+    }
 
-	return lines.join("\n\n");
+    return lines.join("\n\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -99,41 +98,41 @@ function serializeContext(context: Context): string {
 // ---------------------------------------------------------------------------
 
 interface CursorAssistantEvent {
-	type: "assistant";
-	message: {
-		role: "assistant";
-		content: Array<{ type: "text"; text: string }>;
-	};
-	session_id: string;
+    type: "assistant";
+    message: {
+        role: "assistant";
+        content: Array<{ type: "text"; text: string }>;
+    };
+    session_id: string;
 }
 
 interface CursorToolCallEvent {
-	type: "tool_call";
-	subtype: "started" | "completed";
-	/** The outer object has exactly one key: the tool name (e.g. "shellToolCall"). */
-	tool_call: Record<string, CursorToolCallPayload>;
+    type: "tool_call";
+    subtype: "started" | "completed";
+    /** The outer object has exactly one key: the tool name (e.g. "shellToolCall"). */
+    tool_call: Record<string, CursorToolCallPayload>;
 }
 
 interface CursorResultEvent {
-	type: "result";
-	subtype: string;
-	duration_ms: number;
+    type: "result";
+    subtype: string;
+    duration_ms: number;
 }
 
 type CursorStreamEvent =
-	| CursorAssistantEvent
-	| CursorToolCallEvent
-	| CursorResultEvent
-	| { type: string };
+    | CursorAssistantEvent
+    | CursorToolCallEvent
+    | CursorResultEvent
+    | { type: string };
 
 function parseLine(line: string): CursorStreamEvent | null {
-	const trimmed = line.trim();
-	if (!trimmed) return null;
-	try {
-		return JSON.parse(trimmed) as CursorStreamEvent;
-	} catch {
-		return null;
-	}
+    const trimmed = line.trim();
+    if (!trimmed) return null;
+    try {
+        return JSON.parse(trimmed) as CursorStreamEvent;
+    } catch {
+        return null;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -141,289 +140,237 @@ function parseLine(line: string): CursorStreamEvent | null {
 // ---------------------------------------------------------------------------
 
 function streamCursorCli(
-	model: Model<Api>,
-	context: Context,
-	options?: SimpleStreamOptions,
+    model: Model<Api>,
+    context: Context,
+    options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
-	const stream = createAssistantMessageEventStream();
+    const stream = createAssistantMessageEventStream();
 
-	(async () => {
-		const startTime = Date.now();
-		let firstTokenTime: number | undefined;
+    (async () => {
+        const startTime = Date.now();
+        let firstTokenTime: number | undefined;
 
-		const output: AssistantMessage & { duration?: number; ttft?: number } = {
-			role: "assistant",
-			content: [],
-			api: model.api,
-			provider: model.provider,
-			model: model.id,
-			usage: {
-				input: 0,
-				output: 0,
-				cacheRead: 0,
-				cacheWrite: 0,
-				totalTokens: 0,
-				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-			},
-			stopReason: "stop",
-			timestamp: Date.now(),
-		};
+        const output: AssistantMessage & { duration?: number; ttft?: number } = {
+            role: "assistant",
+            content: [],
+            api: model.api,
+            provider: model.provider,
+            model: model.id,
+            usage: {
+                input: 0,
+                output: 0,
+                cacheRead: 0,
+                cacheWrite: 0,
+                totalTokens: 0,
+                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+            },
+            stopReason: "stop",
+            timestamp: Date.now(),
+        };
 
-		const setTiming = () => {
-			output.duration = Date.now() - startTime;
-			output.ttft =
-				firstTokenTime != null ? firstTokenTime - startTime : undefined;
-		};
+        const setTiming = () => {
+            output.duration = Date.now() - startTime;
+            output.ttft =
+                firstTokenTime != null ? firstTokenTime - startTime : undefined;
+        };
 
-		try {
-			const agentPath =
-				process.env.CURSOR_AGENT_PATH ?? process.env.AGENT_PATH ?? "agent";
+        try {
+            const agentPath =
+                process.env.CURSOR_AGENT_PATH ?? process.env.AGENT_PATH ?? "agent";
 
-			const workspacePath = process.cwd();
-			const prompt = serializeContext(context);
-			const reasoningLevel = (options as { reasoning?: string })?.reasoning;
-			const cliModelId = toCursorId(model.id, reasoningLevel);
+            const workspacePath = process.cwd();
+            const prompt = serializeContext(context);
+            const reasoningLevel = (options as { reasoning?: string })?.reasoning;
+            const cliModelId = toCursorId(model.id, reasoningLevel);
 
-			const args = [
-				"--print",
-				"--yolo",
-				"--output-format",
-				"stream-json",
-				"--model",
-				cliModelId,
-				"--trust",
-				"--workspace",
-				workspacePath,
-				prompt,
-			];
+            const args = [
+                "--print",
+                "--yolo",
+                "--output-format",
+                "stream-json",
+                "--model",
+                cliModelId,
+                "--trust",
+                "--workspace",
+                workspacePath,
+                prompt,
+            ];
 
-			if (process.env.CURSOR_API_KEY) {
-				args.unshift("--api-key", process.env.CURSOR_API_KEY);
-			}
+            if (process.env.CURSOR_API_KEY) {
+                args.unshift("--api-key", process.env.CURSOR_API_KEY);
+            }
 
-			stream.push({ type: "start", partial: output });
+            stream.push({ type: "start", partial: output });
 
-			const child = spawn(agentPath, args, {
-				stdio: ["ignore", "pipe", "pipe"],
-				env: process.env,
-			});
+            const child = spawn(agentPath, args, {
+                stdio: ["ignore", "pipe", "pipe"],
+                env: process.env,
+            });
 
-			const onAbort = () => {
-				child.kill("SIGTERM");
-			};
-			options?.signal?.addEventListener("abort", onAbort, { once: true });
+            const onAbort = () => {
+                child.kill("SIGTERM");
+            };
+            options?.signal?.addEventListener("abort", onAbort, { once: true });
 
-			const stderrChunks: string[] = [];
-			child.stderr?.on("data", (chunk: Buffer) => {
-				stderrChunks.push(chunk.toString());
-			});
+            const stderrChunks: string[] = [];
+            child.stderr?.on("data", (chunk: Buffer) => {
+                stderrChunks.push(chunk.toString());
+            });
 
-			let textBlockOpen = false;
-			let accumulatedText = "";
-			const appendTextDelta = (delta: string) => {
-				if (!delta) return;
-				if (firstTokenTime === undefined) firstTokenTime = Date.now();
-				if (!textBlockOpen) {
-					output.content.push({ type: "text", text: "" });
-					const idx = output.content.length - 1;
-					stream.push({
-						type: "text_start",
-						contentIndex: idx,
-						partial: output,
-					});
-					textBlockOpen = true;
-				}
-				const idx = output.content.length - 1;
-				const textBlock = output.content[idx] as TextContent;
-				textBlock.text += delta;
-				accumulatedText += delta;
-				stream.push({
-					type: "text_delta",
-					contentIndex: idx,
-					delta,
-					partial: output,
-				});
-			};
+            let textBlockOpen = false;
+            let accumulatedText = "";
+            const appendTextDelta = (delta: string) => {
+                if (!delta) return;
+                if (firstTokenTime === undefined) firstTokenTime = Date.now();
+                if (!textBlockOpen) {
+                    output.content.push({ type: "text", text: "" });
+                    const idx = output.content.length - 1;
+                    stream.push({
+                        type: "text_start",
+                        contentIndex: idx,
+                        partial: output,
+                    });
+                    textBlockOpen = true;
+                }
+                const idx = output.content.length - 1;
+                const textBlock = output.content[idx] as TextContent;
+                textBlock.text += delta;
+                accumulatedText += delta;
+                stream.push({
+                    type: "text_delta",
+                    contentIndex: idx,
+                    delta,
+                    partial: output,
+                });
+            };
 
-			const stdout = child.stdout;
-			if (!stdout) {
-				throw new Error("Child process has no stdout (expected pipe)");
-			}
-			const rl = createInterface({ input: stdout, crlfDelay: Infinity });
+            const stdout = child.stdout;
+            if (!stdout) {
+                throw new Error("Child process has no stdout (expected pipe)");
+            }
+            const rl = createInterface({ input: stdout, crlfDelay: Infinity });
 
-			rl.on("line", (line: string) => {
-				const event = parseLine(line);
-				if (!event) return;
+            rl.on("line", (line: string) => {
+                const event = parseLine(line);
+                if (!event) return;
 
-				if (event.type === "assistant") {
-					const ae = event as CursorAssistantEvent;
-					for (const block of ae.message.content) {
-						if (block.type !== "text") continue;
-						if (!block.text.trim()) continue;
-						appendTextDelta(block.text);
-					}
-					return;
-				}
+                if (event.type === "assistant") {
+                    const ae = event as CursorAssistantEvent;
+                    for (const block of ae.message.content) {
+                        if (block.type !== "text") continue;
+                        if (!block.text.trim()) continue;
+                        appendTextDelta(block.text);
+                    }
+                    return;
+                }
 
-				// Pi supports structured toolcall_* events, but Cursor CLI's tool_call
-				// stream is observational: by the time we receive it, Cursor has
-				// already executed the tool. Emitting Pi tool calls here would cause
-				// Pi to execute the same tool again and continue another agent turn.
-				if (event.type === "tool_call") {
-					const tce = event as CursorToolCallEvent;
-					const cliKey = Object.keys(tce.tool_call)[0];
-					if (!cliKey) return;
-					const payload = tce.tool_call[cliKey];
-					if (!payload) return;
+                // Pi supports structured toolcall_* events, but Cursor CLI's tool_call
+                // stream is observational: by the time we receive it, Cursor has
+                // already executed the tool. Emitting Pi tool calls here would cause
+                // Pi to execute the same tool again and continue another agent turn.
+                if (event.type === "tool_call") {
+                    const tce = event as CursorToolCallEvent;
+                    const cliKey = Object.keys(tce.tool_call)[0];
+                    if (!cliKey) return;
+                    const payload = tce.tool_call[cliKey];
+                    if (!payload) return;
 
-					if (tce.subtype === "started") {
-						appendTextDelta(renderStartedToolCall(cliKey, payload));
-					} else if (tce.subtype === "completed") {
-						appendTextDelta(renderCompletedToolCall(cliKey, payload));
-					}
-				}
-			});
+                    if (tce.subtype === "completed") {
+                        appendTextDelta(renderCompletedToolCall(cliKey, payload));
+                    }
+                }
+            });
 
-			await new Promise<void>((resolve) => {
-				child.on("close", (code) => {
-					options?.signal?.removeEventListener("abort", onAbort);
+            await new Promise<void>((resolve) => {
+                child.on("close", (code) => {
+                    options?.signal?.removeEventListener("abort", onAbort);
 
-					if (textBlockOpen) {
-						const idx = output.content.length - 1;
-						stream.push({
-							type: "text_end",
-							contentIndex: idx,
-							content: accumulatedText,
-							partial: output,
-						});
-						textBlockOpen = false;
-					}
+                    if (textBlockOpen) {
+                        const idx = output.content.length - 1;
+                        stream.push({
+                            type: "text_end",
+                            contentIndex: idx,
+                            content: accumulatedText,
+                            partial: output,
+                        });
+                        textBlockOpen = false;
+                    }
 
-					if (options?.signal?.aborted) {
-						output.stopReason = "aborted";
-						setTiming();
-						stream.push({ type: "error", reason: "aborted", error: output });
-						stream.end();
-						resolve();
-						return;
-					}
+                    if (options?.signal?.aborted) {
+                        output.stopReason = "aborted";
+                        setTiming();
+                        stream.push({ type: "error", reason: "aborted", error: output });
+                        stream.end();
+                        resolve();
+                        return;
+                    }
 
-					if (code !== 0 && !accumulatedText) {
-						const stderr = stderrChunks.join("").trim();
-						output.stopReason = "error";
-						output.errorMessage =
-							stderr || `Cursor CLI exited with code ${code}`;
-						setTiming();
-						stream.push({ type: "error", reason: "error", error: output });
-						stream.end();
-						resolve();
-						return;
-					}
+                    if (code !== 0 && !accumulatedText) {
+                        const stderr = stderrChunks.join("").trim();
+                        output.stopReason = "error";
+                        output.errorMessage =
+                            stderr || `Cursor CLI exited with code ${code}`;
+                        setTiming();
+                        stream.push({ type: "error", reason: "error", error: output });
+                        stream.end();
+                        resolve();
+                        return;
+                    }
 
-					setTiming();
-					stream.push({ type: "done", reason: "stop", message: output });
-					stream.end();
-					resolve();
-				});
+                    setTiming();
+                    stream.push({ type: "done", reason: "stop", message: output });
+                    stream.end();
+                    resolve();
+                });
 
-				child.on("error", (err) => {
-					options?.signal?.removeEventListener("abort", onAbort);
-					output.stopReason = "error";
-					output.errorMessage = err.message;
-					setTiming();
-					stream.push({ type: "error", reason: "error", error: output });
-					stream.end();
-					resolve();
-				});
-			});
-		} catch (error) {
-			output.stopReason = options?.signal?.aborted ? "aborted" : "error";
-			output.errorMessage =
-				error instanceof Error ? error.message : String(error);
-			setTiming();
-			stream.push({ type: "error", reason: output.stopReason, error: output });
-			stream.end();
-		}
-	})();
+                child.on("error", (err) => {
+                    options?.signal?.removeEventListener("abort", onAbort);
+                    output.stopReason = "error";
+                    output.errorMessage = err.message;
+                    setTiming();
+                    stream.push({ type: "error", reason: "error", error: output });
+                    stream.end();
+                    resolve();
+                });
+            });
+        } catch (error) {
+            output.stopReason = options?.signal?.aborted ? "aborted" : "error";
+            output.errorMessage =
+                error instanceof Error ? error.message : String(error);
+            setTiming();
+            stream.push({ type: "error", reason: output.stopReason, error: output });
+            stream.end();
+        }
+    })();
 
-	return stream;
-}
-
-// ---------------------------------------------------------------------------
-// Auth helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Spawn `agent login` in an interactive child process so the user can
- * authenticate with Cursor from within a Pi session.
- * Returns a promise that resolves when login completes (exit 0) and rejects
- * on non-zero exit or spawn error.
- */
-function runAgentLogin(agentPath: string): Promise<void> {
-	return new Promise((resolve, reject) => {
-		const args: string[] = ["login"];
-		// Suppress browser-open so login is purely CLI-driven (prints URL/code)
-		const env = { ...process.env, NO_OPEN_BROWSER: "1" };
-
-		const child = spawn(agentPath, args, {
-			stdio: "inherit",
-			env,
-		});
-
-		child.on("error", (err) => reject(err));
-		child.on("close", (code) => {
-			if (code === 0) resolve();
-			else reject(new Error(`agent login exited with code ${code}`));
-		});
-	});
-}
-
-/**
- * Run `agent status` and return the trimmed output (e.g. "✓ Logged in as …").
- */
-function runAgentStatus(agentPath: string): Promise<string> {
-	return new Promise((resolve, reject) => {
-		let out = "";
-		const child = spawn(agentPath, ["status"], {
-			stdio: ["ignore", "pipe", "pipe"],
-			env: process.env,
-		});
-		child.stdout?.on("data", (c: Buffer) => {
-			out += c.toString();
-		});
-		child.stderr?.on("data", (c: Buffer) => {
-			out += c.toString();
-		});
-		child.on("error", (err) => reject(err));
-		child.on("close", () => resolve(out.trim()));
-	});
+    return stream;
 }
 
 // ---------------------------------------------------------------------------
 // Extension entry point
 // ---------------------------------------------------------------------------
 
-export default async function (pi: ExtensionAPI) {
-	const agentPath =
-		process.env.CURSOR_AGENT_PATH ?? process.env.AGENT_PATH ?? "agent";
+export default async function(pi: ExtensionAPI) {
+    const agentPath =
+        process.env.CURSOR_AGENT_PATH ?? process.env.AGENT_PATH ?? "agent";
 
-	pi.on("session_start", async (_event, ctx) => {
-		setRendererTheme(ctx.ui.theme);
-	});
+    pi.on("session_start", async (_event, ctx) => {
+        setRendererTheme(ctx.ui.theme);
+    });
 
-	// Attempt dynamic model discovery; fall back to static list on any failure.
-	let modelDefs = STATIC_MODELS;
-	try {
-		modelDefs = await runAgentModels(agentPath);
-	} catch {
-		modelDefs = STATIC_MODELS;
-	}
+    // Attempt dynamic model discovery; fall back to static list on any failure.
+    let modelDefs = STATIC_MODELS;
+    try {
+        modelDefs = await runAgentModels(agentPath);
+    } catch {
+        modelDefs = STATIC_MODELS;
+    }
 
-	pi.registerProvider("cursor", {
-		baseUrl: "cli://cursor-agent",
-		apiKey: "CURSOR_API_KEY",
-		api: "cursor-cli" as Api,
-		models: toProviderModels(modelDefs),
-		streamSimple: streamCursorCli,
-	});
+    pi.registerProvider("cursor", {
+        baseUrl: "cli://cursor-agent",
+        apiKey: "CURSOR_API_KEY",
+        api: "cursor-cli" as Api,
+        models: toProviderModels(modelDefs),
+        streamSimple: streamCursorCli,
+    });
 }
