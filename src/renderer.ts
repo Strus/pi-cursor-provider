@@ -2,7 +2,7 @@ import type { Theme } from "@mariozechner/pi-coding-agent";
 
 export interface CursorToolCallPayload {
     args: Record<string, unknown>;
-    result?: {
+    result?: Record<string, unknown> & {
         success?: Record<string, unknown>;
         rejected?: { reason?: string };
         error?: { message?: string };
@@ -50,6 +50,12 @@ function getString(value: unknown): string | null {
         return String(value);
     }
     return null;
+}
+
+function getRecord(value: unknown): Record<string, unknown> | undefined {
+    return value != null && typeof value === "object"
+        ? (value as Record<string, unknown>)
+        : undefined;
 }
 
 function shortenDisplayPath(value: unknown, maxLength = 60): string | null {
@@ -207,10 +213,55 @@ function stylePreviewLines(
     };
 }
 
+function styleDiffLine(line: string): string {
+    if (line.startsWith("@@")) {
+        return theme.fg("warning", line);
+    }
+    if (line.startsWith("+++")) {
+        return theme.fg("accent", line);
+    }
+    if (line.startsWith("---")) {
+        return theme.fg("muted", line);
+    }
+    if (line.startsWith("+")) {
+        return theme.fg("success", line);
+    }
+    if (line.startsWith("-")) {
+        return theme.fg("error", line);
+    }
+    return theme.fg("toolOutput", line);
+}
+
+function styleDiffLines(
+    text: string,
+    maxLines: number,
+): { lines: string[]; remaining: number } {
+    const trimmed = trimTrailingEmptyLines(text.split("\n"));
+    return {
+        lines: trimmed.slice(0, maxLines).map(styleDiffLine),
+        remaining: Math.max(0, trimmed.length - maxLines),
+    };
+}
+
 function formatToolResultLines(
     toolName: string,
     payload: CursorToolCallPayload,
 ): { isError: boolean; lines: string[] } {
+    const result = payload.result;
+    const fileNotFound = getRecord(result?.fileNotFound);
+    if (fileNotFound) {
+        const path = getString(fileNotFound.path);
+        return {
+            isError: true,
+            lines: [
+                theme.fg(
+                    "error",
+                    path ? `File not found: ${path}` : "File not found.",
+                ),
+            ],
+        };
+    }
+
     const rejectedReason = payload.result?.rejected?.reason;
     if (rejectedReason) {
         return { isError: true, lines: [theme.fg("error", rejectedReason)] };
@@ -259,6 +310,17 @@ function formatToolResultLines(
         return { isError: false, lines };
     }
 
+    if (toolName === "edit") {
+        const diffString = getString(success.diffString);
+        if (diffString) {
+            const { lines, remaining } = styleDiffLines(diffString, 12);
+            if (remaining > 0) {
+                lines.push(theme.fg("muted", `... (${remaining} more lines)`));
+            }
+            return { isError: false, lines };
+        }
+    }
+
     const genericText =
         getString(success.content) ??
         getString(success.output) ??
@@ -279,7 +341,7 @@ function formatToolResultLines(
 }
 
 function renderToolBlock(
-    bg: ToolBlockBg,
+    _bg: ToolBlockBg,
     title: string,
     bodyLines: string[] = [],
 ): string {
