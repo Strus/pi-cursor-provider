@@ -7,10 +7,6 @@
  * Authentication is handled by the CLI itself — run `agent login` (or set the
  * CURSOR_API_KEY environment variable) before using this provider.
  *
- * Usage:
- *   pi install npm:@netandreus/pi-cursor-provider
- *   # Then /model cursor/<model-id>, e.g. /model cursor/sonnet-4.5-thinking
- *
  * Configuration env vars:
  *   CURSOR_AGENT_PATH   Path to the Cursor Agent CLI binary (default: "agent")
  *   CURSOR_API_KEY      API key for Cursor (used by the agent subprocess if set)
