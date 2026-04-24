@@ -176,16 +176,6 @@ function previewText(text: string, maxChars = 140): string {
     return text.length > maxChars ? `${text.slice(0, maxChars - 3)}...` : text;
 }
 
-function formatTimeout(value: unknown): string {
-    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-        return "";
-    }
-    if (value % 1000 === 0) {
-        return theme.fg("muted", ` (timeout ${value / 1000}s)`);
-    }
-    return theme.fg("muted", ` (timeout ${value}ms)`);
-}
-
 function formatToolCallTitle(
     toolName: string,
     args: Record<string, unknown>,
@@ -197,12 +187,9 @@ function formatToolCallTitle(
                 command == null
                     ? invalidArgLabel()
                     : command
-                      ? command
-                      : theme.fg("toolOutput", "...");
-            return (
-                theme.fg("toolTitle", theme.bold(`$ ${commandDisplay}`)) +
-                formatTimeout(args.timeout)
-            );
+                        ? command
+                        : theme.fg("toolOutput", "...");
+            return theme.fg("toolTitle", theme.bold(`$ ${commandDisplay}`));
         }
         case "read": {
             const path = shortenDisplayPath(args.path);
@@ -210,8 +197,8 @@ function formatToolCallTitle(
                 path == null
                     ? invalidArgLabel()
                     : path
-                      ? theme.fg("accent", path)
-                      : theme.fg("toolOutput", "...");
+                        ? theme.fg("accent", path)
+                        : theme.fg("toolOutput", "...");
             const offset = args.offset;
             const limit = args.limit;
             if (typeof offset === "number" || typeof limit === "number") {
@@ -234,8 +221,8 @@ function formatToolCallTitle(
                 path == null
                     ? invalidArgLabel()
                     : path
-                      ? theme.fg("accent", path)
-                      : theme.fg("toolOutput", "...");
+                        ? theme.fg("accent", path)
+                        : theme.fg("toolOutput", "...");
             return `${theme.fg("toolTitle", theme.bold(toolName))} ${pathDisplay}`;
         }
         case "grep":
@@ -248,9 +235,9 @@ function formatToolCallTitle(
                 (pattern == null
                     ? invalidArgLabel()
                     : theme.fg(
-                          "accent",
-                          toolName === "grep" ? `/${pattern}/` : pattern,
-                      )) +
+                        "accent",
+                        toolName === "grep" ? `/${pattern}/` : pattern,
+                    )) +
                 theme.fg(
                     "toolOutput",
                     ` in ${path == null ? invalidArgLabel() : path}`,
@@ -455,17 +442,18 @@ function renderToolBlock(
 ): string {
     const blockLines: string[] = [];
     blockLines.push(""); // top padding
-    blockLines.push(` ${title}`);
+    blockLines.push("");
+    blockLines.push(`  ${title}`);
     if (bodyLines.length > 0) {
         blockLines.push(""); // separator between title and body
         for (const line of bodyLines) {
-            blockLines.push(` ${line}`);
+            blockLines.push(`  ${line}`);
         }
     }
+    blockLines.push("");
     blockLines.push(""); // bottom padding
 
-    const blockContent = blockLines.map((l) => ` ${l || " "}`).join("\n");
-    return blockContent;
+    return blockLines.join("\n");
 
     // BELOW DOES NOT WORK AS EXPECTED
     // Wrap ALL lines in a single theme.bg() call. The ANSI bg-start code
