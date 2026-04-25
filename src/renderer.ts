@@ -447,19 +447,18 @@ function renderToolBlock(
               ? "success"
               : "warning";
 
-    const innerLines = [title, ...bodyLines];
-    const wrappedLines = innerLines.map((line) => {
-        const content = line === "" ? " " : line;
-        return `${theme.fg(borderColor, "│")} ${theme.bg(bg, content)} ${theme.fg(borderColor, "│")}`;
-    });
+    const separator = theme.fg(borderColor, "─".repeat(120));
+    const blockLines: string[] = ["", separator, `  ${title}`];
 
-    return [
-        "",
-        theme.fg(borderColor, "╭─ tool call ─"),
-        ...wrappedLines,
-        theme.fg(borderColor, "╰─────────────"),
-        "",
-    ].join("\n");
+    if (bodyLines.length > 0) {
+        blockLines.push("");
+        for (const line of bodyLines) {
+            blockLines.push(`  ${line}`);
+        }
+    }
+
+    blockLines.push(separator, "");
+    return blockLines.join("\n");
 }
 
 export function renderCompletedToolCall(
