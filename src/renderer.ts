@@ -10,7 +10,6 @@ export interface CursorToolCallPayload {
 }
 
 type ThemeLike = Pick<Theme, "bg" | "bold" | "fg">;
-type ToolBlockBg = "toolPendingBg" | "toolSuccessBg" | "toolErrorBg";
 
 const FALLBACK_THEME: ThemeLike = {
     bg: (_color, text) => text,
@@ -374,36 +373,34 @@ function formatToolResultLines(
     return { isError: false, lines: [""] };
 }
 
-function renderToolBlock(_bg: ToolBlockBg, title: string, bodyLines: string[] = []): string {
+function renderToolBlock(title: string, bodyLines: string[] = []): string {
     const blockLines: string[] = [];
-    blockLines.push(""); // top padding
+
     blockLines.push("");
     blockLines.push(`  ${title}`);
+    let hasBody = false;
     if (bodyLines.length > 0) {
-        blockLines.push(""); // separator between title and body
+        // blockLines.push(""); // separator between title and body
         for (const line of bodyLines) {
+            if (line.length === 0) {
+                continue;
+            }
+
+            hasBody = true;
             blockLines.push(`  ${line}`);
         }
+
+        if (hasBody) {
+            blockLines.push("");
+        }
     }
-    blockLines.push("");
-    blockLines.push(""); // bottom padding
 
-    return blockLines.join("\n");
-
-    // BELOW DOES NOT WORK AS EXPECTED
-    // Wrap ALL lines in a single theme.bg() call. The ANSI bg-start code
-    // lands on the first sub-line; wrapTextWithAnsi's AnsiCodeTracker
-    // carries it forward to every subsequent sub-line. Because the bg
-    // reset (\x1b[49m) only appears at the very end, the Markdown
-    // renderer's right-margin and width-padding characters inherit the
-    // active bg — giving us near-full-width coloured blocks without
-    // needing access to the Box component.
-    // return `\n${theme.bg(bg, blockContent)}\n`;
+    return `${blockLines.join("\n")}\n`;
 }
 
 export function renderCompletedToolCall(cliKey: string, payload: CursorToolCallPayload): string {
     const toolName = toPiToolName(cliKey);
     const title = formatToolCallTitle(toolName, payload.args ?? {});
-    const { isError, lines } = formatToolResultLines(toolName, payload);
-    return renderToolBlock(isError ? "toolErrorBg" : "toolSuccessBg", title, lines);
+    const { _isError, lines } = formatToolResultLines(toolName, payload);
+    return renderToolBlock(title, lines);
 }
