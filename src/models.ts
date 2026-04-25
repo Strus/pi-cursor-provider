@@ -968,18 +968,11 @@ const cursorDefaultToCanonical = new Map<string, string>();
 const allMappedCursorIds = new Set<string>();
 const mappedReasoningCursorIds = new Set<string>();
 for (const [canonicalId, variants] of Object.entries(MODEL_MAP)) {
-    if (variants.default)
-        cursorDefaultToCanonical.set(variants.default, canonicalId);
+    if (variants.default) cursorDefaultToCanonical.set(variants.default, canonicalId);
     for (const cursorId of Object.values(variants)) {
         if (cursorId) allMappedCursorIds.add(cursorId);
     }
-    for (const level of [
-        "minimal",
-        "low",
-        "medium",
-        "high",
-        "xhigh",
-    ] satisfies ReasoningLevel[]) {
+    for (const level of ["minimal", "low", "medium", "high", "xhigh"] satisfies ReasoningLevel[]) {
         const cursorId = variants[level];
         if (cursorId) mappedReasoningCursorIds.add(cursorId);
     }
@@ -994,9 +987,7 @@ for (const model of STATIC_MODELS) {
 }
 
 /** Fast lookup: static model id → definition */
-const STATIC_MODELS_MAP = new Map<string, CursorModelDef>(
-    STATIC_MODELS.map((m) => [m.id, m]),
-);
+const STATIC_MODELS_MAP = new Map<string, CursorModelDef>(STATIC_MODELS.map((m) => [m.id, m]));
 
 /**
  * Convert a Cursor CLI model ID to its canonical ID.
@@ -1025,13 +1016,7 @@ export function toCursorId(canonicalId: string, reasoning?: string): string {
 function hasReasoningVariants(canonicalId: string): boolean {
     const family = MODEL_MAP[canonicalId];
     if (!family) return false;
-    return Boolean(
-        family.minimal ||
-            family.low ||
-            family.medium ||
-            family.high ||
-            family.xhigh,
-    );
+    return Boolean(family.minimal || family.low || family.medium || family.high || family.xhigh);
 }
 
 /** Timeout (ms) for `agent models` discovery call. */
@@ -1056,17 +1041,11 @@ function inferReasoning(id: string): boolean {
 function parseAgentModelsOutput(output: string): CursorModelDef[] {
     const results: CursorModelDef[] = [];
     // Match lines like: "model-id - Display Name  (optional flags)"
-    const lineRe =
-        /^([a-zA-Z0-9][a-zA-Z0-9._-]*)\s+-\s+(.+?)(?:\s+\((?:current|default|current,\s*default)\))?$/;
+    const lineRe = /^([a-zA-Z0-9][a-zA-Z0-9._-]*)\s+-\s+(.+?)(?:\s+\((?:current|default|current,\s*default)\))?$/;
 
     for (const line of output.split("\n")) {
         const trimmed = line.trim();
-        if (
-            !trimmed ||
-            trimmed.startsWith("Available") ||
-            trimmed.startsWith("Tip:")
-        )
-            continue;
+        if (!trimmed || trimmed.startsWith("Available") || trimmed.startsWith("Tip:")) continue;
         const match = lineRe.exec(trimmed);
         if (!match) continue;
 
@@ -1107,11 +1086,7 @@ export function runAgentModels(agentPath: string): Promise<CursorModelDef[]> {
 
         const timeout = setTimeout(() => {
             child.kill("SIGTERM");
-            reject(
-                new Error(
-                    `agent models timed out after ${DISCOVERY_TIMEOUT_MS}ms`,
-                ),
-            );
+            reject(new Error(`agent models timed out after ${DISCOVERY_TIMEOUT_MS}ms`));
         }, DISCOVERY_TIMEOUT_MS);
 
         child.stdout?.on("data", (chunk: Buffer) => {
@@ -1129,11 +1104,7 @@ export function runAgentModels(agentPath: string): Promise<CursorModelDef[]> {
         child.on("close", (code) => {
             clearTimeout(timeout);
             if (code !== 0) {
-                reject(
-                    new Error(
-                        `agent models exited with code ${code}: ${stderr.trim()}`,
-                    ),
-                );
+                reject(new Error(`agent models exited with code ${code}: ${stderr.trim()}`));
                 return;
             }
             const models = parseAgentModelsOutput(stdout);

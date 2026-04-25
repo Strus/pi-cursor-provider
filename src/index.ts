@@ -25,21 +25,9 @@ import type {
     ThinkingContent,
 } from "@mariozechner/pi-ai";
 import { createAssistantMessageEventStream } from "@mariozechner/pi-ai";
-import type {
-    ExtensionAPI,
-    ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
-import {
-    runAgentModels,
-    STATIC_MODELS,
-    toCursorId,
-    toProviderModels,
-} from "./models.js";
-import {
-    type CursorToolCallPayload,
-    renderCompletedToolCall,
-    setRendererTheme,
-} from "./renderer.js";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { runAgentModels, STATIC_MODELS, toCursorId, toProviderModels } from "./models.js";
+import { type CursorToolCallPayload, renderCompletedToolCall, setRendererTheme } from "./renderer.js";
 
 // ---------------------------------------------------------------------------
 // Prompt serialisation
@@ -68,9 +56,7 @@ interface CursorSessionState {
  * The placeholder preserves the image's MIME type and byte-size so the model
  * can at least acknowledge that an image was intended.
  */
-function contentBlockToText(
-    block: TextContent | import("@mariozechner/pi-ai").ImageContent,
-): string {
+function contentBlockToText(block: TextContent | import("@mariozechner/pi-ai").ImageContent): string {
     if (block.type === "text") return block.text;
     // ImageContent: { type: "image", data: string (base64), mimeType: string }
     const bytes = Math.round((block.data.length * 3) / 4);
@@ -78,13 +64,9 @@ function contentBlockToText(
 }
 
 function serializeMessageContent(
-    content:
-        | string
-        | (TextContent | import("@mariozechner/pi-ai").ImageContent)[],
+    content: string | (TextContent | import("@mariozechner/pi-ai").ImageContent)[],
 ): string {
-    return typeof content === "string"
-        ? content
-        : content.map(contentBlockToText).join("\n");
+    return typeof content === "string" ? content : content.map(contentBlockToText).join("\n");
 }
 
 function serializeContext(context: Context): string {
@@ -130,17 +112,13 @@ function restoreCursorSessionId(ctx: ExtensionContext): string | undefined {
     let cursorSessionId: string | undefined;
 
     for (const entry of ctx.sessionManager.getBranch()) {
-        if (
-            entry.type !== "custom" ||
-            entry.customType !== CURSOR_SESSION_ENTRY_TYPE
-        ) {
+        if (entry.type !== "custom" || entry.customType !== CURSOR_SESSION_ENTRY_TYPE) {
             continue;
         }
 
         const data = entry.data as CursorSessionEntryData | undefined;
         const value = data?.cursorSessionId;
-        cursorSessionId =
-            typeof value === "string" && value.trim() ? value : undefined;
+        cursorSessionId = typeof value === "string" && value.trim() ? value : undefined;
     }
 
     return cursorSessionId;
@@ -160,10 +138,7 @@ function persistCursorSessionId(
     state.persisted = nextPersisted;
 }
 
-function syncCursorSessionState(
-    ctx: ExtensionContext,
-    state: CursorSessionState,
-): string | undefined {
+function syncCursorSessionState(ctx: ExtensionContext, state: CursorSessionState): string | undefined {
     const restored = restoreCursorSessionId(ctx);
     state.current = restored;
     state.persisted = restored ?? null;
@@ -227,9 +202,7 @@ function parseLine(line: string): CursorStreamEvent | null {
 
 function getCursorSessionId(event: CursorStreamEvent): string | undefined {
     const sessionId = (event as CursorEventBase).session_id;
-    return typeof sessionId === "string" && sessionId.trim()
-        ? sessionId
-        : undefined;
+    return typeof sessionId === "string" && sessionId.trim() ? sessionId : undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -277,34 +250,20 @@ function createStreamCursorCli(cursorSessionState: CursorSessionState) {
 
             const setTiming = () => {
                 output.duration = Date.now() - startTime;
-                output.ttft =
-                    firstTokenTime != null
-                        ? firstTokenTime - startTime
-                        : undefined;
+                output.ttft = firstTokenTime != null ? firstTokenTime - startTime : undefined;
             };
 
             try {
-                const agentPath =
-                    process.env.CURSOR_AGENT_PATH ??
-                    process.env.AGENT_PATH ??
-                    "agent";
+                const agentPath = process.env.CURSOR_AGENT_PATH ?? process.env.AGENT_PATH ?? "agent";
 
                 const workspacePath = process.cwd();
                 const prompt = cursorSessionState.current
                     ? serializeLatestUserPrompt(context)
                     : serializeContext(context);
-                const reasoningLevel = (options as { reasoning?: string })
-                    ?.reasoning;
+                const reasoningLevel = (options as { reasoning?: string })?.reasoning;
                 const cliModelId = toCursorId(model.id, reasoningLevel);
 
-                const args = [
-                    "--print",
-                    "--yolo",
-                    "--output-format",
-                    "stream-json",
-                    "--model",
-                    cliModelId,
-                ];
+                const args = ["--print", "--yolo", "--output-format", "stream-json", "--model", cliModelId];
 
                 if (cursorSessionState.current) {
                     args.push("--resume", cursorSessionState.current);
@@ -418,8 +377,7 @@ function createStreamCursorCli(cursorSessionState: CursorSessionState) {
 
                 const appendTextDelta = (delta: string) => {
                     if (!delta) return;
-                    if (firstTokenTime === undefined)
-                        firstTokenTime = Date.now();
+                    if (firstTokenTime === undefined) firstTokenTime = Date.now();
                     const { block, index } = ensureTextBlock();
                     block.text += delta;
                     accumulatedText += delta;
@@ -433,8 +391,7 @@ function createStreamCursorCli(cursorSessionState: CursorSessionState) {
 
                 const appendThinkingDelta = (delta: string) => {
                     if (!delta) return;
-                    if (firstTokenTime === undefined)
-                        firstTokenTime = Date.now();
+                    if (firstTokenTime === undefined) firstTokenTime = Date.now();
                     const { block, index } = ensureThinkingBlock();
                     block.thinking += delta;
                     stream.push({
@@ -447,9 +404,7 @@ function createStreamCursorCli(cursorSessionState: CursorSessionState) {
 
                 const stdout = child.stdout;
                 if (!stdout) {
-                    throw new Error(
-                        "Child process has no stdout (expected pipe)",
-                    );
+                    throw new Error("Child process has no stdout (expected pipe)");
                 }
                 const rl = createInterface({
                     input: stdout,
@@ -505,9 +460,7 @@ function createStreamCursorCli(cursorSessionState: CursorSessionState) {
                         if (!payload) return;
 
                         if (tce.subtype === "completed") {
-                            appendTextDelta(
-                                renderCompletedToolCall(cliKey, payload),
-                            );
+                            appendTextDelta(renderCompletedToolCall(cliKey, payload));
                         }
                     }
                 });
@@ -534,8 +487,7 @@ function createStreamCursorCli(cursorSessionState: CursorSessionState) {
                         if (code !== 0 && !accumulatedText) {
                             const stderr = stderrChunks.join("").trim();
                             output.stopReason = "error";
-                            output.errorMessage =
-                                stderr || `Cursor CLI exited with code ${code}`;
+                            output.errorMessage = stderr || `Cursor CLI exited with code ${code}`;
                             setTiming();
                             stream.push({
                                 type: "error",
@@ -572,11 +524,8 @@ function createStreamCursorCli(cursorSessionState: CursorSessionState) {
                     });
                 });
             } catch (error) {
-                output.stopReason = options?.signal?.aborted
-                    ? "aborted"
-                    : "error";
-                output.errorMessage =
-                    error instanceof Error ? error.message : String(error);
+                output.stopReason = options?.signal?.aborted ? "aborted" : "error";
+                output.errorMessage = error instanceof Error ? error.message : String(error);
                 setTiming();
                 stream.push({
                     type: "error",
@@ -596,8 +545,7 @@ function createStreamCursorCli(cursorSessionState: CursorSessionState) {
 // ---------------------------------------------------------------------------
 
 export default async function (pi: ExtensionAPI) {
-    const agentPath =
-        process.env.CURSOR_AGENT_PATH ?? process.env.AGENT_PATH ?? "agent";
+    const agentPath = process.env.CURSOR_AGENT_PATH ?? process.env.AGENT_PATH ?? "agent";
     const cursorSessionState: CursorSessionState = {
         current: undefined,
         persisted: null,

@@ -53,9 +53,7 @@ function getString(value: unknown): string | null {
 }
 
 function getRecord(value: unknown): Record<string, unknown> | undefined {
-    return value != null && typeof value === "object"
-        ? (value as Record<string, unknown>)
-        : undefined;
+    return value != null && typeof value === "object" ? (value as Record<string, unknown>) : undefined;
 }
 
 function getArray(value: unknown): unknown[] | undefined {
@@ -94,18 +92,13 @@ function normalizeTodoStatus(value: unknown): {
     }
 }
 
-function formatTodoTitle(
-    toolName: "todo" | "updateTodos",
-    args: Record<string, unknown>,
-): string | null {
+function formatTodoTitle(toolName: "todo" | "updateTodos", args: Record<string, unknown>): string | null {
     const todos = getTodoItems(args.todos);
     if (!todos.length) return null;
 
     const countLabel = `${todos.length} ${todos.length === 1 ? "item" : "items"}`;
     const mergeLabel =
-        toolName === "updateTodos"
-            ? theme.fg("muted", args.merge === true ? " (merge)" : " (replace)")
-            : "";
+        toolName === "updateTodos" ? theme.fg("muted", args.merge === true ? " (merge)" : " (replace)") : "";
 
     return `${theme.fg("toolTitle", theme.bold(toolName))} ${theme.fg("accent", countLabel)}${mergeLabel}`;
 }
@@ -123,16 +116,11 @@ function formatTodoResultLines(payload: CursorToolCallPayload): {
     const maxVisible = 8;
     const lines = todos.slice(0, maxVisible).map((todo, index) => {
         const status = normalizeTodoStatus(todo.status);
-        const content =
-            getString(todo.content)?.trim() ||
-            getString(todo.id)?.trim() ||
-            `Todo ${index + 1}`;
+        const content = getString(todo.content)?.trim() || getString(todo.id)?.trim() || `Todo ${index + 1}`;
         const id = getString(todo.id)?.trim();
         const dependencies = getArray(todo.dependencies)?.length ?? 0;
 
-        let line =
-            `${theme.fg(status.color, status.marker)} ` +
-            theme.fg("toolOutput", content);
+        let line = `${theme.fg(status.color, status.marker)} ${theme.fg("toolOutput", content)}`;
 
         if (id && id !== content) {
             line += theme.fg("muted", ` (${id})`);
@@ -150,9 +138,7 @@ function formatTodoResultLines(payload: CursorToolCallPayload): {
     });
 
     if (todos.length > maxVisible) {
-        lines.push(
-            theme.fg("muted", `... (${todos.length - maxVisible} more items)`),
-        );
+        lines.push(theme.fg("muted", `... (${todos.length - maxVisible} more items)`));
     }
 
     return { isError: false, lines };
@@ -176,39 +162,24 @@ function previewText(text: string, maxChars = 140): string {
     return text.length > maxChars ? `${text.slice(0, maxChars - 3)}...` : text;
 }
 
-function formatToolCallTitle(
-    toolName: string,
-    args: Record<string, unknown>,
-): string {
+function formatToolCallTitle(toolName: string, args: Record<string, unknown>): string {
     switch (toolName) {
         case "bash": {
             const command = getString(args.command);
             const commandDisplay =
-                command == null
-                    ? invalidArgLabel()
-                    : command
-                        ? command
-                        : theme.fg("toolOutput", "...");
+                command == null ? invalidArgLabel() : command ? command : theme.fg("toolOutput", "...");
             return theme.fg("toolTitle", theme.bold(`$ ${commandDisplay}`));
         }
         case "read": {
             const path = shortenDisplayPath(args.path);
             let pathDisplay =
-                path == null
-                    ? invalidArgLabel()
-                    : path
-                        ? theme.fg("accent", path)
-                        : theme.fg("toolOutput", "...");
+                path == null ? invalidArgLabel() : path ? theme.fg("accent", path) : theme.fg("toolOutput", "...");
             const offset = args.offset;
             const limit = args.limit;
             if (typeof offset === "number" || typeof limit === "number") {
                 const startLine = typeof offset === "number" ? offset : 1;
-                const endLine =
-                    typeof limit === "number" ? `${startLine + limit - 1}` : "";
-                pathDisplay += theme.fg(
-                    "warning",
-                    `:${startLine}${endLine ? `-${endLine}` : ""}`,
-                );
+                const endLine = typeof limit === "number" ? `${startLine + limit - 1}` : "";
+                pathDisplay += theme.fg("warning", `:${startLine}${endLine ? `-${endLine}` : ""}`);
             }
             return `${theme.fg("toolTitle", theme.bold("read"))} ${pathDisplay}`;
         }
@@ -218,11 +189,7 @@ function formatToolCallTitle(
         case "ls": {
             const path = shortenDisplayPath(args.path);
             const pathDisplay =
-                path == null
-                    ? invalidArgLabel()
-                    : path
-                        ? theme.fg("accent", path)
-                        : theme.fg("toolOutput", "...");
+                path == null ? invalidArgLabel() : path ? theme.fg("accent", path) : theme.fg("toolOutput", "...");
             return `${theme.fg("toolTitle", theme.bold(toolName))} ${pathDisplay}`;
         }
         case "grep":
@@ -234,14 +201,8 @@ function formatToolCallTitle(
                 " " +
                 (pattern == null
                     ? invalidArgLabel()
-                    : theme.fg(
-                        "accent",
-                        toolName === "grep" ? `/${pattern}/` : pattern,
-                    )) +
-                theme.fg(
-                    "toolOutput",
-                    ` in ${path == null ? invalidArgLabel() : path}`,
-                );
+                    : theme.fg("accent", toolName === "grep" ? `/${pattern}/` : pattern)) +
+                theme.fg("toolOutput", ` in ${path == null ? invalidArgLabel() : path}`);
             const glob = getString(args.glob);
             if (glob) text += theme.fg("toolOutput", ` (${glob})`);
             return text;
@@ -252,13 +213,8 @@ function formatToolCallTitle(
             const text =
                 theme.fg("toolTitle", theme.bold(toolName)) +
                 " " +
-                (pattern == null
-                    ? invalidArgLabel()
-                    : theme.fg("accent", pattern)) +
-                theme.fg(
-                    "toolOutput",
-                    ` in ${path == null ? invalidArgLabel() : path}`,
-                );
+                (pattern == null ? invalidArgLabel() : theme.fg("accent", pattern)) +
+                theme.fg("toolOutput", ` in ${path == null ? invalidArgLabel() : path}`);
             return text;
         }
         case "webFetch":
@@ -290,14 +246,9 @@ function trimTrailingEmptyLines(lines: string[]): string[] {
     return lines.slice(0, end);
 }
 
-function stylePreviewLines(
-    lines: string[],
-    maxLines: number,
-): { lines: string[]; remaining: number } {
+function stylePreviewLines(lines: string[], maxLines: number): { lines: string[]; remaining: number } {
     const trimmed = trimTrailingEmptyLines(lines);
-    const visible = trimmed
-        .slice(0, maxLines)
-        .map((line) => theme.fg("toolOutput", line));
+    const visible = trimmed.slice(0, maxLines).map((line) => theme.fg("toolOutput", line));
     return {
         lines: visible,
         remaining: Math.max(0, trimmed.length - maxLines),
@@ -323,10 +274,7 @@ function styleDiffLine(line: string): string {
     return theme.fg("toolOutput", line);
 }
 
-function styleDiffLines(
-    text: string,
-    maxLines: number,
-): { lines: string[]; remaining: number } {
+function styleDiffLines(text: string, maxLines: number): { lines: string[]; remaining: number } {
     const trimmed = trimTrailingEmptyLines(text.split("\n"));
     return {
         lines: trimmed.slice(0, maxLines).map(styleDiffLine),
@@ -344,12 +292,7 @@ function formatToolResultLines(
         const path = getString(fileNotFound.path);
         return {
             isError: true,
-            lines: [
-                theme.fg(
-                    "error",
-                    path ? `File not found: ${path}` : "File not found.",
-                ),
-            ],
+            lines: [theme.fg("error", path ? `File not found: ${path}` : "File not found.")],
         };
     }
 
@@ -369,8 +312,7 @@ function formatToolResultLines(
     }
 
     if (toolName === "bash") {
-        const exitCode =
-            typeof success.exitCode === "number" ? success.exitCode : undefined;
+        const exitCode = typeof success.exitCode === "number" ? success.exitCode : undefined;
         const output =
             getString(success.interleavedOutput) ??
             [getString(success.stdout), getString(success.stderr)]
@@ -422,10 +364,7 @@ function formatToolResultLines(
         getString(success.stdout) ??
         getString(success.message);
     if (genericText) {
-        const { lines, remaining } = stylePreviewLines(
-            genericText.split("\n"),
-            5,
-        );
+        const { lines, remaining } = stylePreviewLines(genericText.split("\n"), 5);
         if (remaining > 0) {
             lines.push(theme.fg("muted", `... (${remaining} more lines)`));
         }
@@ -435,11 +374,7 @@ function formatToolResultLines(
     return { isError: false, lines: [""] };
 }
 
-function renderToolBlock(
-    _bg: ToolBlockBg,
-    title: string,
-    bodyLines: string[] = [],
-): string {
+function renderToolBlock(_bg: ToolBlockBg, title: string, bodyLines: string[] = []): string {
     const blockLines: string[] = [];
     blockLines.push(""); // top padding
     blockLines.push("");
@@ -466,16 +401,9 @@ function renderToolBlock(
     // return `\n${theme.bg(bg, blockContent)}\n`;
 }
 
-export function renderCompletedToolCall(
-    cliKey: string,
-    payload: CursorToolCallPayload,
-): string {
+export function renderCompletedToolCall(cliKey: string, payload: CursorToolCallPayload): string {
     const toolName = toPiToolName(cliKey);
     const title = formatToolCallTitle(toolName, payload.args ?? {});
     const { isError, lines } = formatToolResultLines(toolName, payload);
-    return renderToolBlock(
-        isError ? "toolErrorBg" : "toolSuccessBg",
-        title,
-        lines,
-    );
+    return renderToolBlock(isError ? "toolErrorBg" : "toolSuccessBg", title, lines);
 }
