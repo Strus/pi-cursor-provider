@@ -4,6 +4,13 @@
 
 # pi-cursor-cli-provider
 
+<p align="left">
+  <a href="https://www.npmjs.com/package/@akepka/pi-cursor-cli-provider">
+    <img src="https://img.shields.io/npm/v/%40akepka%2Fpi-cursor-cli-provider" alt="npm version" />
+  </a>
+</p>
+
+
 A [Pi Coding Agent](https://github.com/badlogic/pi-mono) custom provider that routes model requests through the **Cursor
 CLI**, enabling you to use your Cursor subscription inside Pi.
 
