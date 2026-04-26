@@ -401,6 +401,6 @@ function renderToolBlock(title: string, bodyLines: string[] = []): string {
 export function renderCompletedToolCall(cliKey: string, payload: CursorToolCallPayload): string {
     const toolName = toPiToolName(cliKey);
     const title = formatToolCallTitle(toolName, payload.args ?? {});
-    const { _isError, lines } = formatToolResultLines(toolName, payload);
+    const { lines } = formatToolResultLines(toolName, payload);
     return renderToolBlock(title, lines);
 }
