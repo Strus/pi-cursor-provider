@@ -15,6 +15,12 @@ CLI**, enabling you to use your Cursor subscription inside Pi.
 
 This project is a heavily modified fork of [netandreus/pi-cursor-provider](https://github.com/netandreus/pi-cursor-provider).
 
+<p align="center">
+    <a href="./screenshot.png">
+      <img src="./screenshot.png" alt="Terminal screenshot with extension output visible" width="600" />
+    </a>
+</p>
+
 # Motivation
 
 (if you don't feel like reading all this, go straight to [Installation](#installation))
